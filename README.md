@@ -15,3 +15,7 @@ graft does not:
 - hide root or bypass root detection systems
 - patch or maintain device kernels
 - build or maintain a custom aosp distributions
+
+## docs
+
+- [trusted computing base](docs/trusted-computing-base.md)
