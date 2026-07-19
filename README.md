@@ -18,4 +18,5 @@ graft does not:
 
 ## docs
 
+- [installer transaction contract](docs/installer-transaction.md)
 - [trusted computing base](docs/trusted-computing-base.md)
