@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+cd "$repository_root"
+
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "pre-commit: cargo is required" >&2
+    exit 1
+fi
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: gitleaks is required" >&2
+    exit 1
+fi
+
+gitleaks git --config .gitleaks.toml --pre-commit --staged --redact .
+cargo fmt --all -- --check
+cargo test --workspace

@@ -1,1 +1,30 @@
+# rust
 /target/
+**/*.rs.bk
+
+# android + gradle
+.gradle/
+**/build/
+.cxx/
+.externalNativeBuild/
+.idea/
+*.iml
+captures/
+local.properties
+
+# local config + signing material
+.env
+.env.*
+!.env.example
+/secrets/
+*.jks
+*.keystore
+keystore.properties
+
+# generated
+/dist/
+/out/
+*.log
+
+# macOS noise
+.DS_Store
