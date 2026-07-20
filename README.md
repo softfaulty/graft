@@ -25,6 +25,10 @@ graft does not:
 - [support grades](docs/support-grades.md)
 - [trusted computing base](docs/trusted-computing-base.md)
 
+## development
+
+run `./dev help` for the current local workflows. unfinished recovery and device commands are listed honestly and exit without doing anything exciting to a phone.
+
 ## license
 
 apache-2.0, see [LICENSE](LICENSE). bundled third-party attributions belong in [NOTICE](NOTICE).

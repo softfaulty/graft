@@ -1,0 +1,75 @@
+#!/bin/sh
+
+set -eu
+
+project_root=$(CDPATH= cd "$(dirname "$0")" && pwd)
+cd "$project_root"
+
+show_help() {
+    cat <<'EOF'
+usage: ./dev <command>
+
+available now:
+    help             show this help
+    fmt              format the Rust workspace
+    fmt-check        check Rust formatting without changing files
+    test [args...]   test the Rust workspace
+    build [args...]  build the Rust workspace
+    build-runtime    build graftd, graftctl, su and graft-sshd
+reserved:
+    doctor           check host and Android build dependencies
+    build-recovery   build the recovery patcher
+    package          package release artifacts
+    deploy           deploy runtime artifacts through adb
+    probe            inspect a connected device
+    patch            stage patched artifacts
+    verify           verify staged artifacts
+    install          install verified artifacts
+    logs             stream graft logs from a connected device
+EOF
+}
+
+unimplemented() {
+    echo "dev: $1 is unimplemented" >&2
+    exit 2
+}
+
+command=${1:-help}
+
+if [ "$#" -gt 0 ]; then
+    shift
+fi
+
+case "$command" in
+    help|-h|--help)
+        show_help
+        ;;
+    fmt)
+        cargo fmt --all
+        ;;
+    fmt-check)
+        cargo fmt --all -- --check
+        ;;
+    test)
+        cargo test --workspace "$@"
+        ;;
+    build)
+        cargo build --workspace "$@"
+        ;;
+    build-runtime)
+        cargo build \
+            --package graftd \
+            --package graftctl \
+            --package su \
+            --package graft-sshd \
+            "$@"
+        ;;
+    doctor|build-recovery|package|deploy|probe|patch|verify|install|logs)
+        unimplemented "$command"
+        ;;
+    *)
+        echo "dev: unknown command: $command" >&2
+        echo "run './dev help' for available commands" >&2
+        exit 2
+        ;;
+esac
