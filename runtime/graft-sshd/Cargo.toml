@@ -5,3 +5,5 @@ edition = "2024"
 license.workspace = true
 
 [dependencies]
+graft-logging = { version = "0.1.0", path = "../../crates/graft-logging" }
+tracing = "0.1.44"
