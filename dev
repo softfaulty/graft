@@ -5,6 +5,100 @@ set -eu
 project_root=$(CDPATH= cd "$(dirname "$0")" && pwd)
 cd "$project_root"
 
+select_android_ndk() {
+    ndk_candidate=$1
+
+    if [ ! -f "$ndk_candidate/source.properties" ]; then
+        return 1
+    fi
+
+    ndk_revision=$(awk -F '=' '
+        /^Pkg.Revision/ {
+            revision = $2
+            sub(/^[[:space:]]*/, "", revision)
+            print revision
+            exit
+        }
+    ' "$ndk_candidate/source.properties")
+
+    if [ -z "$ndk_revision" ]; then
+        return 1
+    fi
+
+    for ndk_prebuilt in "$ndk_candidate"/toolchains/llvm/prebuilt/*; do
+        ndk_clang="$ndk_prebuilt/bin/aarch64-linux-android29-clang"
+
+        if [ -x "$ndk_clang" ]; then
+            android_ndk_path=$ndk_candidate
+            android_ndk_revision=$ndk_revision
+            android_clang_path=$ndk_clang
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+find_android_ndk() {
+    android_ndk_path=
+    android_ndk_revision=
+    android_clang_path=
+
+    if [ -n "${ANDROID_NDK_HOME:-}" ]; then
+        if select_android_ndk "$ANDROID_NDK_HOME"; then
+            return 0
+        fi
+
+        echo "dev: ANDROID_NDK_HOME is not a valid ARM64 android NDK: $ANDROID_NDK_HOME" >&2
+        return 1
+    fi
+
+    if [ -n "${ANDROID_NDK_ROOT:-}" ]; then
+        if select_android_ndk "$ANDROID_NDK_ROOT"; then
+            return 0
+        fi
+
+        echo "dev: ANDROID_NDK_ROOT is not a valid ARM64 Android NDK: $ANDROID_NDK_ROOT" >&2
+        return 1
+    fi
+
+    user_home=${HOME:-}
+
+    for sdk_root in \
+        "${ANDROID_SDK_ROOT:-}" \
+        "${ANDROID_HOME:-}" \
+        "$user_home/Library/Android/sdk" \
+        "$user_home/Android/Sdk"; do
+        if [ -z "$sdk_root" ] || [ ! -d "$sdk_root" ]; then
+            continue
+        fi
+
+        for ndk_candidate in "$sdk_root"/ndk/*; do
+            select_android_ndk "$ndk_candidate" || true
+        done
+
+        if [ -z "$android_ndk_path" ]; then
+            select_android_ndk "$sdk_root/ndk-bundle" || true
+        fi
+
+        if [ -n "$android_ndk_path" ]; then
+            return 0
+        fi
+    done
+
+    echo "dev: Android NDK not found" >&2
+    echo "set ANDROID_NDK_HOME to an NDK directory or install a side-by-side NDK in the Android SDK" >&2
+    return 1
+}
+
+doctor() {
+    find_android_ndk
+
+    printf 'android ndk: %s\n' "$android_ndk_path"
+    printf 'ndk revision: %s\n' "$android_ndk_revision"
+    printf 'arm64 clang: %s\n' "$android_clang_path"
+}
+
 show_help() {
     cat <<'EOF'
 usage: ./dev <command>
@@ -16,8 +110,8 @@ available now:
     test [args...]   test the Rust workspace
     build [args...]  build the Rust workspace
     build-runtime    build graftd, graftctl, su and graft-sshd
+    doctor           locate and validate the Android NDK
 reserved:
-    doctor           check host and Android build dependencies
     build-recovery   build the recovery patcher
     package          package release artifacts
     deploy           deploy runtime artifacts through adb
@@ -64,7 +158,10 @@ case "$command" in
             --package graft-sshd \
             "$@"
         ;;
-    doctor|build-recovery|package|deploy|probe|patch|verify|install|logs)
+    doctor)
+        doctor
+        ;;
+    build-recovery|package|deploy|probe|patch|verify|install|logs)
         unimplemented "$command"
         ;;
     *)
