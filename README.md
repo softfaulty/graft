@@ -23,3 +23,7 @@ graft does not:
 - [runtime failure contract](docs/runtime-failure-contract.md)
 - [support grades](docs/support-grades.md)
 - [trusted computing base](docs/trusted-computing-base.md)
+
+## license
+
+apache-2.0, see [LICENSE](LICENSE). bundled third-party attributions belong in [NOTICE](NOTICE).

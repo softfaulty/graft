@@ -1,0 +1,11 @@
+Graft
+Copyright 2026 softfault
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+Graft currently bundles no third-party recovery tools.
+
+Before a third-party binary, library, script, or data file is distributed
+with Graft, the NOTICE file must record its name, version, upstream source,
+copyright attribution, license, and the Graft artifact that contains it.
+The corresponding license text must ship with that artifact.
