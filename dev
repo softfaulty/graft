@@ -62,6 +62,14 @@ find_android_ndk() {
         return 1
     fi
 
+    for ndk_candidate in \
+        /opt/homebrew/share/android-ndk \
+        /usr/local/share/android-ndk; do
+        if select_android_ndk "$ndk_candidate"; then
+            return 0
+        fi
+    done
+
     user_home=${HOME:-}
 
     for sdk_root in \
@@ -91,12 +99,115 @@ find_android_ndk() {
     return 1
 }
 
-doctor() {
-    find_android_ndk
+find_host_tool() {
+    host_tool_name=$1
+    host_tool_formula=$2
+    host_tool_path=$(command -v "$host_tool_name" 2>/dev/null || true)
 
-    printf 'android ndk: %s\n' "$android_ndk_path"
-    printf 'ndk revision: %s\n' "$android_ndk_revision"
-    printf 'arm64 clang: %s\n' "$android_clang_path"
+    if [ -n "$host_tool_path" ]; then
+        return 0
+    fi
+
+    if [ -n "$host_tool_formula" ] && command -v brew >/dev/null 2>&1; then
+        homebrew_prefix=$(brew --prefix 2>/dev/null || true)
+
+        for host_tool_candidate in \
+            "$homebrew_prefix/opt/$host_tool_formula/bin/$host_tool_name" \
+            "$homebrew_prefix/opt/$host_tool_formula/sbin/$host_tool_name"; do
+            if [ -x "$host_tool_candidate" ]; then
+                host_tool_path=$host_tool_candidate
+                return 0
+            fi
+        done
+    fi
+
+    return 1
+}
+
+check_host_tool() {
+    host_tool_name=$1
+    host_tool_formula=$2
+    host_tool_fix=$3
+
+    if find_host_tool "$host_tool_name" "$host_tool_formula"; then
+        printf 'ok:      %-12s %s\n' "$host_tool_name" "$host_tool_path"
+        return
+    fi
+
+    printf 'missing: %-12s fix: %s\n' "$host_tool_name" "$host_tool_fix" >&2
+    doctor_errors=$((doctor_errors + 1))
+}
+
+doctor() {
+    doctor_errors=0
+
+    case $(uname -s) in
+        Darwin)
+            platform_tools_fix='brew install --cask android-platform-tools'
+            ext4_tools_fix='brew install e2fsprogs'
+            python_fix='brew install python'
+            java_fix='brew install openjdk'
+            zip_tools_fix='brew install zip unzip'
+            tar_fix='xcode-select --install'
+            xz_fix='brew install xz'
+            lz4_fix='brew install lz4'
+            ndk_fix='brew install --cask android-ndk'
+            ;;
+        Linux)
+            platform_tools_fix='sudo apt-get install adb fastboot'
+            ext4_tools_fix='sudo apt-get install e2fsprogs'
+            python_fix='sudo apt-get install python3'
+            java_fix='sudo apt-get install default-jdk'
+            zip_tools_fix='sudo apt-get install zip unzip'
+            tar_fix='sudo apt-get install tar'
+            xz_fix='sudo apt-get install xz-utils'
+            lz4_fix='sudo apt-get install lz4'
+            ndk_fix='install the NDK with the Android SDK Manager and set ANDROID_NDK_HOME'
+            ;;
+        *)
+            platform_tools_fix='install Android SDK Platform-Tools and add them to PATH'
+            ext4_tools_fix='install e2fsprogs and add its bin and sbin directories to PATH'
+            python_fix='install Python 3 and add python3 to PATH'
+            java_fix='install a JDK and add java and javac to PATH'
+            zip_tools_fix='install zip and unzip and add them to PATH'
+            tar_fix='install tar and add it to PATH'
+            xz_fix='install xz and add it to PATH'
+            lz4_fix='install lz4 and add it to PATH'
+            ndk_fix='install the Android NDK and set ANDROID_NDK_HOME'
+            ;;
+    esac
+
+    check_host_tool adb '' "$platform_tools_fix"
+    check_host_tool fastboot '' "$platform_tools_fix"
+    check_host_tool python3 python "$python_fix"
+    check_host_tool java openjdk "$java_fix"
+    check_host_tool javac openjdk "$java_fix"
+
+    check_host_tool e2fsck e2fsprogs "$ext4_tools_fix"
+    check_host_tool resize2fs e2fsprogs "$ext4_tools_fix"
+    check_host_tool debugfs e2fsprogs "$ext4_tools_fix"
+    check_host_tool mke2fs e2fsprogs "$ext4_tools_fix"
+
+    check_host_tool zip zip "$zip_tools_fix"
+    check_host_tool unzip unzip "$zip_tools_fix"
+    check_host_tool tar '' "$tar_fix"
+    check_host_tool xz xz "$xz_fix"
+    check_host_tool lz4 lz4 "$lz4_fix"
+
+    if find_android_ndk; then
+        printf 'ok:      %-12s %s (%s)\n' "android-ndk" "$android_ndk_path" "$android_ndk_revision"
+        printf 'ok:      %-12s %s\n' "arm64-clang" "$android_clang_path"
+    else
+        printf 'missing: %-12s fix: %s\n' "android-ndk" "$ndk_fix" >&2
+        doctor_errors=$((doctor_errors + 1))
+    fi
+
+    if [ "$doctor_errors" -gt 0 ]; then
+        printf 'doctor: %s required dependencies missing\n' "$doctor_errors" >&2
+        return 1
+    fi
+
+    echo "doctor: all required dependencies found"
 }
 
 show_help() {
@@ -110,7 +221,7 @@ available now:
     test [args...]   test the Rust workspace
     build [args...]  build the Rust workspace
     build-runtime    build graftd, graftctl, su and graft-sshd
-    doctor           locate and validate the Android NDK
+    doctor           check host and Android build dependencies
 reserved:
     build-recovery   build the recovery patcher
     package          package release artifacts
