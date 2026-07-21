@@ -1,6 +1,10 @@
 use std::str::FromStr;
 
+use graft_error::ErrorReport;
 use tracing::Level;
+
+pub const INVALID_ARGUMENTS: &str = "GRAFT-CLI-0001";
+pub const LOGGING_INIT_FAILED: &str = "GRAFT-LOG-0001";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LogFormat {
@@ -29,7 +33,22 @@ pub enum Action {
     Run(Options),
 }
 
-pub fn parse_args<I, S>(args: I) -> Result<Action, String>
+pub fn parse_args<I, S>(binary: &str, args: I) -> Result<Action, ErrorReport>
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    parse_args_inner(args).map_err(|cause| {
+        ErrorReport::new(
+            INVALID_ARGUMENTS,
+            format!("{binary} rejected its command line"),
+            format!("run '{binary} --help' and correct the arguments"),
+        )
+        .with_cause(cause)
+    })
+}
+
+fn parse_args_inner<I, S>(args: I) -> Result<Action, String>
 where
     I: IntoIterator<Item = S>,
     S: Into<String>,
@@ -72,7 +91,7 @@ where
     Ok(Action::Run(options))
 }
 
-pub fn init(options: Options) -> Result<(), String> {
+pub fn init(binary: &str, options: Options) -> Result<(), ErrorReport> {
     let result = match options.format {
         LogFormat::Human => tracing_subscriber::fmt()
             .compact()
@@ -84,7 +103,14 @@ pub fn init(options: Options) -> Result<(), String> {
             .try_init(),
     };
 
-    result.map_err(|error| format!("failed to init logger: {error}"))
+    result.map_err(|error| {
+        ErrorReport::new(
+            LOGGING_INIT_FAILED,
+            format!("{binary} could not initialize logging"),
+            "check the logging options and ensure logging is initialized only once",
+        )
+        .with_cause(error.to_string())
+    })
 }
 
 pub fn help(binary: &str) -> String {
@@ -120,7 +146,7 @@ mod tests {
     #[test]
     fn uses_human_info_defaults() {
         assert_eq!(
-            parse_args(Vec::<String>::new()),
+            parse_args("graftd", Vec::<String>::new()),
             Ok(Action::Run(Options::default()))
         );
     }
@@ -128,7 +154,7 @@ mod tests {
     #[test]
     fn parses_logging_options() {
         assert_eq!(
-            parse_args(["--log-level", "debug", "--log-format=json"]),
+            parse_args("graftd", ["--log-level", "debug", "--log-format=json"]),
             Ok(Action::Run(Options {
                 level: Level::DEBUG,
                 format: LogFormat::Json
@@ -138,17 +164,26 @@ mod tests {
 
     #[test]
     fn rejects_missing_values() {
-        assert_eq!(
-            parse_args(["--log-level"]),
-            Err("--log-level requires a value".to_owned())
-        );
+        let error = parse_args("graftd", ["--log-level"]).unwrap_err();
+
+        assert_eq!(error.code(), INVALID_ARGUMENTS);
+        assert_eq!(error.causes(), ["--log-level requires a value"]);
     }
 
     #[test]
     fn rejected_unknown_arguments() {
-        assert_eq!(
-            parse_args(["--definitely-not-real-hello-guys-how-are-you-this-is-a-stupid-test-god-i-hate-writing-these"]),
-            Err("unknown argument: --definitely-not-real-hello-guys-how-are-you-this-is-a-stupid-test-god-i-hate-writing-these".to_owned())
+        let error = parse_args(
+            "graftd",
+            ["--definitely-not-real-hello-guys-how-are-you-this-is-a-stupid-test-god-i-hate-writing-these"],
         )
+        .unwrap_err();
+
+        assert_eq!(error.code(), INVALID_ARGUMENTS);
+        assert_eq!(
+            error.causes(),
+            [
+                "unknown argument: --definitely-not-real-hello-guys-how-are-you-this-is-a-stupid-test-god-i-hate-writing-these"
+            ]
+        );
     }
 }

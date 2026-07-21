@@ -12,6 +12,7 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 name = "desktop"
 version = "0.1.0"
 dependencies = [
+ "graft-error",
  "graft-logging",
  "tracing",
 ]
@@ -33,6 +34,14 @@ name = "graft-erofs"
 version = "0.1.0"
 
 [[package]]
+name = "graft-error"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "graft-ext4"
 version = "0.1.0"
 
@@ -44,6 +53,7 @@ version = "0.1.0"
 name = "graft-logging"
 version = "0.1.0"
 dependencies = [
+ "graft-error",
  "tracing",
  "tracing-subscriber",
 ]
@@ -72,6 +82,7 @@ version = "0.1.0"
 name = "graft-sshd"
 version = "0.1.0"
 dependencies = [
+ "graft-error",
  "graft-logging",
  "tracing",
 ]
@@ -92,6 +103,7 @@ version = "0.1.0"
 name = "graftctl"
 version = "0.1.0"
 dependencies = [
+ "graft-error",
  "graft-logging",
  "tracing",
 ]
@@ -100,6 +112,7 @@ dependencies = [
 name = "graftd"
 version = "0.1.0"
 dependencies = [
+ "graft-error",
  "graft-logging",
  "tracing",
 ]
@@ -182,6 +195,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
 dependencies = [
  "serde_core",
+ "serde_derive",
 ]
 
 [[package]]
@@ -236,6 +250,7 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 name = "su"
 version = "0.1.0"
 dependencies = [
+ "graft-error",
  "graft-logging",
  "tracing",
 ]

@@ -3,6 +3,9 @@ Copyright 2026 softfault
 
 Licensed under the Apache License, Version 2.0. See LICENSE.
 
+Rust dependencies distributed in Graft binaries are attributed in
+THIRD_PARTY_LICENSES. That file is generated from Cargo.lock with cargo-about.
+
 Graft currently bundles no third-party recovery tools.
 
 Before a third-party binary, library, script, or data file is distributed
