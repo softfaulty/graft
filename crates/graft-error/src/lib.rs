@@ -11,6 +11,7 @@ use serde::Serialize;
 pub const SCHEMA_VERSION: u16 = 1;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[must_use]
 pub struct ErrorReport {
     schema_version: u16,
     code: String,

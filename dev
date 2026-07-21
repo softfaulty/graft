@@ -218,6 +218,7 @@ available now:
     help             show this help
     fmt              format the Rust workspace
     fmt-check        check Rust formatting without changing files
+    lint             lint every Rust target with warnings denied
     test [args...]   test the Rust workspace
     build [args...]  build the Rust workspace
     build-runtime    build graftd, graftctl, su and graft-sshd
@@ -254,6 +255,9 @@ case "$command" in
         ;;
     fmt-check)
         cargo fmt --all -- --check
+        ;;
+    lint)
+        cargo clippy --workspace --all-targets -- -D warnings
         ;;
     test)
         cargo test --workspace "$@"
